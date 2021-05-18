@@ -1,6 +1,7 @@
 #include "mbed.h"
 #include "mbed_rpc.h"
 
+#include "stm32l475e_iot01_accelero.h"
 
 static BufferedSerial pc(STDIO_UART_TX, STDIO_UART_RX);
 static BufferedSerial xbee(D1, D0);
@@ -17,9 +18,14 @@ void xbee_rx(void);
 void reply_messange(char *xbee_reply, char *messange);
 void check_addr(char *xbee_reply, char *messenger);
 
+void getAcc(Arguments *in, Reply *out);
+RPCFunction rpcAcc(&getAcc, "getAcc");
+
 int main(){
 
    pc.set_baud(9600);
+
+   
 
    char xbee_reply[4];
 
@@ -59,6 +65,9 @@ int main(){
       printf("clear\r\n");
    }
 
+   printf("Start accelerometer init\n");
+   BSP_ACCELERO_Init();
+
    // start
    printf("start\r\n");
    t.start(callback(&queue, &EventQueue::dispatch_forever));
@@ -77,6 +86,7 @@ void xbee_rx(void)
 {
    char buf[100] = {0};
    char outbuf[100] = {0};
+
    while(xbee.readable()){
       for (int i=0; ; i++) {
          char *recv = new char[1];
@@ -117,4 +127,12 @@ void check_addr(char *xbee_reply, char *messenger){
    xbee_reply[1] = '\0';
    xbee_reply[2] = '\0';
    xbee_reply[3] = '\0';
+}
+
+void getAcc(Arguments *in, Reply *out) {
+   int16_t pDataXYZ[3] = {0};
+        char buffer[200];
+   BSP_ACCELERO_AccGetXYZ(pDataXYZ);
+   sprintf(buffer, "Accelerometer values: (%d, %d, %d)", pDataXYZ[0], pDataXYZ[1], pDataXYZ[2]);
+   out->putData(buffer);
 }
